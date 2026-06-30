@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { AIInsightView } from "@/components/ai/AIInsightView";
 import { EquityCurveChart } from "@/components/charts/EquityCurveChart";
 import { MetricTile } from "@/components/data/MetricTile";
 import { InsufficientData } from "@/components/feedback/InsufficientData";
+import { useAIPerformance } from "@/hooks/useAI";
 import { useDashboard, useEquityCurve } from "@/hooks/useAnalytics";
 import { useJournal } from "@/hooks/useTrades";
 import { cn } from "@/lib/utils";
@@ -37,6 +39,7 @@ export default function DashboardPage() {
   const { data: dash } = useDashboard();
   const { data: equity } = useEquityCurve();
   const { data: recent } = useJournal({ page: 1, page_size: 5 });
+  const { data: aiPerformance, isLoading: aiLoading } = useAIPerformance();
 
   const currency = dash?.quote_currency ?? "USDT";
   const hasEquity = (equity?.points.length ?? 0) > 0;
@@ -96,8 +99,7 @@ export default function DashboardPage() {
         </div>
         <div className="col-span-12 lg:col-span-4">
           <Panel title="AI Insights">
-            {/* AI is introduced at M9; until then, never fabricate. */}
-            <InsufficientData variant="ai" />
+            <AIInsightView insight={aiPerformance} loading={aiLoading} />
           </Panel>
         </div>
       </div>

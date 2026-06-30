@@ -49,6 +49,11 @@ class Settings(BaseSettings):
     # AI (M9+)
     ai_model: str = "claude-opus-4-8"
     anthropic_api_key: str = ""
+    # Data-sufficiency + similarity thresholds (sensible defaults; tune with data).
+    ai_sufficient_days: int = 7
+    ai_min_strategy_trades: int = 20
+    ai_min_matches: int = 5
+    ai_min_similarity: float = 0.6
 
 
 @lru_cache

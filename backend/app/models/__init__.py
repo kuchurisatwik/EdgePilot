@@ -5,6 +5,12 @@ Alembic autogenerate and for ``create_all`` in tests. Models are added per phase
 (M1: user, M2: strategy, M3: trade, ...).
 """
 
+from app.models.ai_insight import (  # noqa: F401
+    AIConfidence,
+    AIInsight,
+    AIInsightType,
+    Recommendation,
+)
 from app.models.base import Base  # noqa: F401
 from app.models.market_context import (  # noqa: F401
     MarketContext,
@@ -48,4 +54,8 @@ __all__ = [
     "MarketDataSource",
     "Screenshot",
     "ScreenshotSlot",
+    "AIInsight",
+    "AIInsightType",
+    "AIConfidence",
+    "Recommendation",
 ]

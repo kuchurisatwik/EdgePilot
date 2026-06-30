@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from app.api.ai.routes import router as ai_router
 from app.api.analytics.routes import router as analytics_router
 from app.api.auth.routes import router as auth_router
 from app.api.health.routes import router as health_router
@@ -28,3 +29,4 @@ api_router.include_router(
     market_context_router, prefix="/market-context", tags=["market-context"]
 )  # M7
 api_router.include_router(screenshots_router, tags=["screenshots"])  # M8
+api_router.include_router(ai_router, prefix="/ai", tags=["ai"])  # M9

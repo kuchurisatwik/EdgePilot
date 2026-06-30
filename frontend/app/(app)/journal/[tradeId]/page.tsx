@@ -5,27 +5,15 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { MetricTile } from "@/components/data/MetricTile";
 import { CloseTradeDialog } from "@/components/trades/CloseTradeDialog";
+import { AIInsightView } from "@/components/ai/AIInsightView";
 import { MarketContextPanel } from "@/components/trades/MarketContextPanel";
 import { ScreenshotGallery } from "@/components/trades/ScreenshotGallery";
+import { useTradeSummary } from "@/hooks/useAI";
 import { useSettings } from "@/hooks/useSettings";
 import { useDeleteTrade, useOpenTrade, useTrade } from "@/hooks/useTrades";
 import { cn } from "@/lib/utils";
 import { formatDate, formatMoney, signedColor, toNumber } from "@/lib/format";
 import { ApiError } from "@/services/apiClient";
-
-function LockedCard({ title, note }: { title: string; note: string }) {
-  return (
-    <div className="rounded-lg border border-border bg-panel p-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-text">{title}</h2>
-        <span className="rounded border border-border px-2 py-0.5 text-[10px] uppercase tracking-wide text-text-muted">
-          Locked
-        </span>
-      </div>
-      <p className="mt-2 text-sm text-text-muted">{note}</p>
-    </div>
-  );
-}
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
@@ -40,6 +28,7 @@ export default function TradeReviewPage() {
   const { tradeId } = useParams<{ tradeId: string }>();
   const router = useRouter();
   const { data: trade, isLoading } = useTrade(tradeId);
+  const { data: aiSummary, isLoading: aiSummaryLoading } = useTradeSummary(tradeId, true);
   const { data: settings } = useSettings();
   const openTrade = useOpenTrade();
   const deleteTrade = useDeleteTrade();
@@ -208,10 +197,10 @@ export default function TradeReviewPage() {
           <ScreenshotGallery tradeId={trade.id} />
         </div>
         <div className="col-span-12 lg:col-span-4">
-          <LockedCard
-            title="AI Summary"
-            note="A plain-language summary of this trade — arrives in M9, once enough data exists."
-          />
+          <section className="rounded-lg border border-border bg-panel p-5">
+            <h2 className="mb-3 text-sm font-semibold text-text">AI Summary</h2>
+            <AIInsightView insight={aiSummary} loading={aiSummaryLoading} />
+          </section>
         </div>
       </div>
 

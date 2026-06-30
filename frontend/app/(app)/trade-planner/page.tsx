@@ -2,15 +2,28 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { InsufficientData } from "@/components/feedback/InsufficientData";
+import { ReasoningBlock } from "@/components/feedback/ReasoningBlock";
 import { RiskPanel } from "@/components/risk/RiskPanel";
 import { StrategySelect } from "@/components/strategies/StrategySelect";
 import { Field } from "@/components/ui/Field";
+import { useSimilar } from "@/hooks/useAI";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useSettings } from "@/hooks/useSettings";
 import { usePlanTrade, useRiskCalc } from "@/hooks/useTrades";
 import { cn } from "@/lib/utils";
+import { toNumber } from "@/lib/format";
 import { ApiError } from "@/services/apiClient";
+import type { SimilarInput } from "@/services/aiApi";
 import type { RiskCalcInput } from "@/services/tradeApi";
-import type { OrderType, TradeDirection } from "@/types";
+import type { OrderType, Recommendation, TradeDirection } from "@/types";
+
+const RECOMMENDATION_LABEL: Record<Recommendation, string> = {
+  take: "Take Trade",
+  reduce: "Reduce Size",
+  avoid: "Avoid Trade",
+  insufficient: "Insufficient Data",
+};
 
 function parseNum(value: string): number | null {
   if (value.trim() === "") return null;
@@ -77,6 +90,20 @@ export default function TradePlannerPage() {
   const breakdown = data?.risk;
   const rules = data?.rules;
   const currency = settings?.quote_currency ?? "USDT";
+
+  // Live AI recommendation from historically similar trades (debounced).
+  const similarRaw = useMemo<SimilarInput | null>(() => {
+    if (strategyId == null || entryN == null || stopN == null || entryN === stopN) return null;
+    return {
+      strategy_id: strategyId,
+      direction,
+      entry_price: entryN,
+      stop_loss: stopN,
+      take_profit: targetN,
+    };
+  }, [strategyId, direction, entryN, stopN, targetN]);
+  const similarInput = useDebouncedValue(similarRaw, 600);
+  const { data: similar } = useSimilar(similarInput);
 
   const canPlan =
     strategyId != null && symbol.trim().length > 0 && entryN != null && stopN != null;
@@ -275,18 +302,49 @@ export default function TradePlannerPage() {
         </aside>
       </div>
 
-      {/* BOTTOM: locked AI recommendation */}
+      {/* BOTTOM: AI recommendation (secondary to the Risk panel; never overrides it) */}
       <div className="rounded-lg border border-border bg-panel p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-text">AI Recommendation</h2>
-          <span className="rounded border border-border px-2 py-0.5 text-[10px] uppercase tracking-wide text-text-muted">
-            Locked
-          </span>
-        </div>
-        <p className="mt-2 max-w-3xl text-sm text-text-muted">
-          Historical similarity, win rate and a Take / Reduce / Avoid recommendation unlock in M9,
-          once enough trades have been collected. The platform never fabricates confidence.
-        </p>
+        <h2 className="text-sm font-semibold text-text">AI Recommendation</h2>
+        {!similar ? (
+          <p className="mt-2 text-sm text-text-muted">
+            Enter a strategy, entry and stop to see what your history says.
+          </p>
+        ) : similar.recommendation === "insufficient" ? (
+          <div className="mt-2">
+            <InsufficientData variant="ai" />
+          </div>
+        ) : (
+          <div className="mt-2 space-y-2">
+            <ReasoningBlock
+              recommendation={RECOMMENDATION_LABEL[similar.recommendation]}
+              reasoning={similar.reasoning}
+              confidence={similar.confidence}
+            />
+            <div className="flex flex-wrap gap-4 text-xs text-text-muted">
+              <span>
+                Similar trades: <span className="text-text">{similar.match_count}</span>
+              </span>
+              {similar.historical_win_rate != null ? (
+                <span>
+                  Historical win rate:{" "}
+                  <span className="text-text">
+                    {(toNumber(similar.historical_win_rate) * 100).toFixed(0)}%
+                  </span>
+                </span>
+              ) : null}
+              {similar.historical_avg_r != null ? (
+                <span>
+                  Avg R: <span className="text-text">{toNumber(similar.historical_avg_r).toFixed(2)}</span>
+                </span>
+              ) : null}
+            </div>
+            {rules?.status === "BLOCK" ? (
+              <p className="text-xs text-danger">
+                Your Risk Engine BLOCK overrides this suggestion — the trader stays responsible.
+              </p>
+            ) : null}
+          </div>
+        )}
       </div>
     </div>
   );

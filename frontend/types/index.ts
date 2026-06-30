@@ -168,6 +168,31 @@ export type MarketSession = "asia" | "london" | "newyork" | "unknown";
 export type VolatilityRegime = "low" | "normal" | "high" | "unknown";
 export type MarketDataSource = "stub" | "provider" | "manual";
 
+export type AIConfidence = "high" | "medium" | "low" | "insufficient";
+export type AIInsightType =
+  | "trade_summary"
+  | "performance"
+  | "similar_trade"
+  | "strategy_review"
+  | "coaching";
+export type Recommendation = "take" | "reduce" | "avoid" | "insufficient";
+
+export type AIInsightResponse = {
+  insight_type: AIInsightType;
+  content: string;
+  confidence: AIConfidence;
+};
+
+export type SimilarTradeAnalysis = {
+  match_count: number;
+  avg_similarity: string | null;
+  historical_win_rate: string | null;
+  historical_avg_r: string | null;
+  recommendation: Recommendation;
+  reasoning: string;
+  confidence: AIConfidence;
+};
+
 export type ScreenshotSlot =
   | "entry_trade_tf"
   | "entry_higher_tf"
