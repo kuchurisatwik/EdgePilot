@@ -1,29 +1,35 @@
-"""Security primitives — password hashing and JWT.
+"""Security primitives — password hashing, JWT, and refresh-token hashing."""
 
-M0 ships the helper surface; M1 wires them into the auth service and the
-``get_current_user`` dependency.
-"""
-
+import hashlib
+import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import bcrypt
 import jwt
-from passlib.context import CryptContext
 
 from app.core.config import settings
-
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 ACCESS_TOKEN = "access"
 REFRESH_TOKEN = "refresh"
 
+# bcrypt hashes at most the first 72 bytes of the password.
+_BCRYPT_MAX_BYTES = 72
+
+
+def _password_bytes(password: str) -> bytes:
+    return password.encode("utf-8")[:_BCRYPT_MAX_BYTES]
+
 
 def hash_password(password: str) -> str:
-    return _pwd_context.hash(password)
+    return bcrypt.hashpw(_password_bytes(password), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(password: str, password_hash: str) -> bool:
-    return _pwd_context.verify(password, password_hash)
+    try:
+        return bcrypt.checkpw(_password_bytes(password), password_hash.encode("utf-8"))
+    except ValueError:
+        return False
 
 
 def _create_token(subject: str, token_type: str, expires_delta: timedelta, **claims: Any) -> str:
@@ -40,21 +46,23 @@ def _create_token(subject: str, token_type: str, expires_delta: timedelta, **cla
 
 def create_access_token(subject: str, **claims: Any) -> str:
     return _create_token(
-        subject,
-        ACCESS_TOKEN,
-        timedelta(minutes=settings.access_token_expire_min),
-        **claims,
+        subject, ACCESS_TOKEN, timedelta(minutes=settings.access_token_expire_min), **claims
     )
 
 
-def create_refresh_token(subject: str, **claims: Any) -> str:
-    return _create_token(
-        subject,
-        REFRESH_TOKEN,
-        timedelta(days=settings.refresh_token_expire_days),
-        **claims,
+def create_refresh_token(subject: str) -> tuple[str, str]:
+    """Return (token, jti). The jti uniquely identifies the token server-side."""
+    jti = secrets.token_urlsafe(32)
+    token = _create_token(
+        subject, REFRESH_TOKEN, timedelta(days=settings.refresh_token_expire_days), jti=jti
     )
+    return token, jti
 
 
 def decode_token(token: str) -> dict[str, Any]:
     return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+
+
+def hash_refresh_token(token: str) -> str:
+    """Store only a hash of the refresh token, never the token itself."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()

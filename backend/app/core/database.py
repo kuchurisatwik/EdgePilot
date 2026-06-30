@@ -21,9 +21,13 @@ SessionLocal = sessionmaker(
 
 
 def get_db() -> Iterator[Session]:
-    """Yield a request-scoped session; always closed afterwards."""
+    """Request-scoped unit of work: commit on success, roll back on error."""
     db = SessionLocal()
     try:
         yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()

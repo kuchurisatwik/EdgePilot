@@ -28,8 +28,21 @@ type RequestOptions = Omit<RequestInit, "body"> & { body?: unknown };
 let refreshInFlight: Promise<boolean> | null = null;
 
 async function refreshAccessToken(): Promise<boolean> {
-  // Implemented in M1. For now, no refresh endpoint exists yet.
-  return false;
+  try {
+    const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!res.ok) return false;
+    const data = (await res.json()) as { access_token?: string };
+    if (data?.access_token) {
+      tokenStorage.set(data.access_token);
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 async function rawRequest<T>(path: string, options: RequestOptions): Promise<T> {

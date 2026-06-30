@@ -7,6 +7,7 @@ All domain errors derive from ``AppException`` and serialize to a consistent
 import logging
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -66,11 +67,11 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def _handle_validation(_: Request, exc: RequestValidationError) -> JSONResponse:
-        return JSONResponse(
-            status_code=422,
-            content=_error_body("validation_error", "Request validation failed")
-            | {"detail": exc.errors()},
-        )
+        content = {
+            "error": {"code": "validation_error", "message": "Request validation failed"},
+            "detail": jsonable_encoder(exc.errors()),
+        }
+        return JSONResponse(status_code=422, content=content)
 
     @app.exception_handler(Exception)
     async def _handle_unexpected(_: Request, exc: Exception) -> JSONResponse:

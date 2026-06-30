@@ -26,13 +26,19 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://trader:trader@localhost:5432/trader_copilot"
 
     # Auth / JWT
-    jwt_secret: str = "dev-only-change-me"
+    jwt_secret: str = "dev-only-insecure-secret-change-me-0123456789abcdef"
     jwt_algorithm: str = "HS256"
     access_token_expire_min: int = 15
     refresh_token_expire_days: int = 7
 
     # Frontend origin (CORS)
     frontend_origin: str = "http://localhost:3000"
+
+    # Refresh-token cookie (httpOnly). Set cookie_secure=true behind HTTPS.
+    refresh_cookie_name: str = "tc_refresh"
+    cookie_secure: bool = False
+    cookie_samesite: str = "lax"
+    cookie_path: str = "/api/auth"
 
     # Storage (local FS in MVP)
     screenshot_dir: str = "./storage/screenshots"

@@ -11,13 +11,14 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { ApiError } from "@/services/apiClient";
 
 const schema = z.object({
+  name: z.string().min(1, "Name is required"),
   email: z.email("Enter a valid email"),
-  password: z.string().min(1, "Password is required"),
+  password: z.string().min(8, "At least 8 characters"),
 });
 type Values = z.infer<typeof schema>;
 
-export default function LoginPage() {
-  const { login, status } = useAuth();
+export default function RegisterPage() {
+  const { register: registerUser, status } = useAuth();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const {
@@ -33,20 +34,26 @@ export default function LoginPage() {
   async function onSubmit(values: Values) {
     setFormError(null);
     try {
-      await login(values.email, values.password);
+      await registerUser(values.email, values.password, values.name);
       router.replace("/dashboard");
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Unable to sign in.");
+      setFormError(err instanceof ApiError ? err.message : "Unable to create account.");
     }
   }
 
   return (
     <div className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-sm rounded-lg border border-border bg-panel p-8">
-        <h1 className="text-lg font-semibold text-text">Sign in</h1>
-        <p className="mt-1 text-sm text-text-muted">Trader Copilot AI — your risk desk.</p>
+        <h1 className="text-lg font-semibold text-text">Create account</h1>
+        <p className="mt-1 text-sm text-text-muted">Start your trading risk desk.</p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
+          <Field
+            label="Name"
+            autoComplete="name"
+            error={errors.name?.message}
+            {...register("name")}
+          />
           <Field
             label="Email"
             type="email"
@@ -57,7 +64,7 @@ export default function LoginPage() {
           <Field
             label="Password"
             type="password"
-            autoComplete="current-password"
+            autoComplete="new-password"
             error={errors.password?.message}
             {...register("password")}
           />
@@ -67,14 +74,14 @@ export default function LoginPage() {
             disabled={isSubmitting}
             className="w-full rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-60"
           >
-            {isSubmitting ? "Signing in…" : "Sign in"}
+            {isSubmitting ? "Creating…" : "Create account"}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-text-muted">
-          No account?{" "}
-          <Link href="/register" className="text-accent hover:underline">
-            Create one
+          Already have an account?{" "}
+          <Link href="/login" className="text-accent hover:underline">
+            Sign in
           </Link>
         </p>
       </div>

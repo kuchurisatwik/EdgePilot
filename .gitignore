@@ -30,6 +30,9 @@ yarn-error.log*
 /storage/
 screenshots/
 pgdata/
+*.db
+*.sqlite
+*.sqlite3
 
 # ---- OS / editor ----
 .DS_Store
