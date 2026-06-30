@@ -17,3 +17,16 @@ export type UserSettings = {
   quote_currency: string;
   timezone: string;
 };
+
+export type RiskAppetite = "conservative" | "moderate" | "aggressive";
+
+export type Strategy = {
+  id: string;
+  name: string;
+  description: string | null;
+  risk_appetite: RiskAppetite;
+  notes: string | null;
+  is_default: boolean;
+  is_active: boolean;
+  created_at: string;
+};
