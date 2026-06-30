@@ -7,6 +7,13 @@ Alembic autogenerate and for ``create_all`` in tests. Models are added per phase
 
 from app.models.base import Base  # noqa: F401
 from app.models.strategy import RiskAppetite, Strategy  # noqa: F401
+from app.models.trade import (  # noqa: F401
+    OrderType,
+    Trade,
+    TradeDirection,
+    TradeResult,
+    TradeStatus,
+)
 from app.models.user import RefreshToken, User, UserSettings  # noqa: F401
 
 __all__ = [
@@ -16,4 +23,9 @@ __all__ = [
     "RefreshToken",
     "Strategy",
     "RiskAppetite",
+    "Trade",
+    "TradeDirection",
+    "OrderType",
+    "TradeStatus",
+    "TradeResult",
 ]
