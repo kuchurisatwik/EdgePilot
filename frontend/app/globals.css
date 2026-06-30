@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Trader Copilot AI — dark-mode-first design system.
+   Dark is the ONLY theme in the MVP (UX "Visual Style").
+   No bright gradients, no neon, minimal motion.
+   ============================================================ */
+
+:root {
+  /* Surfaces */
+  --bg: #0a0b0d; /* near-black app background */
+  --panel: #13161b; /* dark slate panels / cards / sidebar */
+  --panel-raised: #1b1f26;
+  --border: #252a33;
+
+  /* Text */
+  --text: #e6e8eb;
+  --text-muted: #8a93a2;
+
+  /* Semantic */
+  --success: #22c55e; /* profit, PASS, wins */
+  --warning: #f59e0b; /* WARNING, caution */
+  --danger: #ef4444; /* loss, BLOCK, drawdown */
+  --neutral: #64748b; /* inactive, breakeven */
+  --accent: #3b82f6; /* focus, CTAs, AI accent */
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-raised: var(--panel-raised);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-neutral: var(--neutral);
+  --color-accent: var(--accent);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Large numeric displays — readable from a distance, no jitter on live recalc. */
+.numeric {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+.numeric-lg {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 600;
+}
+.numeric-xl {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  font-size: 2rem;
+  line-height: 2.25rem;
+  font-weight: 700;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
