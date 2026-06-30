@@ -25,7 +25,7 @@ from app.core.security import (
 from app.models.user import User
 from app.repositories import refresh_token_repo, user_repo
 from app.schemas.auth import LoginRequest, RegisterRequest
-from app.services import strategy_service
+from app.services import rule_service, strategy_service
 
 
 @dataclass
@@ -57,9 +57,10 @@ def register(db: Session, payload: RegisterRequest) -> AuthResult:
     user = user_repo.create(
         db, email=email, password_hash=hash_password(payload.password), name=payload.name
     )
-    # Seed per-user defaults in the same transaction (rule defaults added in M4).
+    # Seed per-user defaults in the same transaction.
     user_repo.create_settings(db, user_id=user.id)
     strategy_service.ensure_defaults(db, user.id)
+    rule_service.ensure_default_rules(db, user.id)
     return _issue_tokens(db, user)
 
 

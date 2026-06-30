@@ -37,7 +37,7 @@ def test_risk_calculate(client):
         json={"entry_price": 100, "stop_loss": 95, "take_profit": 110},
     )
     assert res.status_code == 200
-    b = res.json()
+    b = res.json()["risk"]
     assert float(b["per_unit_risk"]) == 5.0
     assert float(b["risk_amount"]) == 100.0
     assert float(b["position_size"]) == 20.0
@@ -63,8 +63,9 @@ def test_risk_calculate_overrides_risk_pct(client):
         headers=headers,
         json={"entry_price": 100, "stop_loss": 95, "risk_pct": 2},
     )
-    assert float(res.json()["risk_amount"]) == 200.0
-    assert res.json()["rr_ratio"] is None  # no target supplied
+    body = res.json()["risk"]
+    assert float(body["risk_amount"]) == 200.0
+    assert body["rr_ratio"] is None  # no target supplied
 
 
 def test_plan_trade_creates_draft(client):

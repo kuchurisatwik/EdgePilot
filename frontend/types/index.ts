@@ -45,6 +45,39 @@ export type TradeRiskBreakdown = {
   exposure_pct: string | null;
 };
 
+export type RuleStatus = "PASS" | "WARNING" | "BLOCK";
+export type RuleSeverity = "warning" | "block";
+export type RuleType =
+  | "max_risk_per_trade"
+  | "daily_loss_limit"
+  | "weekly_loss_limit"
+  | "consecutive_loss_limit";
+
+export type RuleViolation = {
+  rule_type: RuleType;
+  severity: RuleSeverity;
+  message: string;
+  observed: string;
+  threshold: string;
+};
+
+export type RuleEvaluationResult = {
+  status: RuleStatus;
+  violations: RuleViolation[];
+};
+
+export type RiskRule = {
+  rule_type: RuleType;
+  threshold: string;
+  severity: RuleSeverity;
+  is_enabled: boolean;
+};
+
+export type RiskCalcResponse = {
+  risk: TradeRiskBreakdown;
+  rules: RuleEvaluationResult;
+};
+
 export type Trade = {
   id: string;
   strategy_id: string;

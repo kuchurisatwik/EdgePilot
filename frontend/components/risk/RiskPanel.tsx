@@ -2,10 +2,12 @@
 
 import { MetricTile } from "@/components/data/MetricTile";
 import { formatMoney, toNumber } from "@/lib/format";
-import type { TradeRiskBreakdown } from "@/types";
+import { cn } from "@/lib/utils";
+import type { RuleEvaluationResult, RuleStatus, TradeRiskBreakdown } from "@/types";
 
 type RiskPanelProps = {
   breakdown?: TradeRiskBreakdown;
+  rules?: RuleEvaluationResult;
   currency: string;
   loading?: boolean;
   error?: string | null;
@@ -15,11 +17,18 @@ function sizeDisplay(value: string): string {
   return toNumber(value).toLocaleString(undefined, { maximumFractionDigits: 8 });
 }
 
+const STATUS_STYLES: Record<RuleStatus, string> = {
+  PASS: "text-success border-success/50",
+  WARNING: "text-warning border-warning/50",
+  BLOCK: "text-danger border-danger/50",
+};
+
 /**
  * Always-visible risk analysis (UX: the Trade Planner's right panel).
- * Values are the Risk Engine's output — the source of truth.
+ * Values are the Risk Engine's output — the source of truth — plus the Rule
+ * Engine verdict. A BLOCK is shown prominently; the trader may still override.
  */
-export function RiskPanel({ breakdown, currency, loading, error }: RiskPanelProps) {
+export function RiskPanel({ breakdown, rules, currency, loading, error }: RiskPanelProps) {
   const ready = Boolean(breakdown) && !error;
   const b = ready ? breakdown : undefined;
 
@@ -63,12 +72,34 @@ export function RiskPanel({ breakdown, currency, loading, error }: RiskPanelProp
         />
       </div>
 
-      <div className="rounded-lg border border-border bg-panel p-4">
+      <div className={cn("rounded-lg border bg-panel p-4", rules ? STATUS_STYLES[rules.status] : "border-border")}>
         <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
           Rule Validation
         </p>
-        <p className="numeric-lg mt-1 text-neutral">—</p>
-        <p className="mt-1 text-xs text-text-muted">PASS / WARNING / BLOCK arrives in M4.</p>
+        <p className={cn("numeric-lg mt-1", rules ? STATUS_STYLES[rules.status].split(" ")[0] : "text-neutral")}>
+          {rules ? rules.status : "—"}
+        </p>
+        {rules && rules.violations.length > 0 ? (
+          <ul className="mt-2 space-y-1">
+            {rules.violations.map((v) => (
+              <li key={v.rule_type} className="text-xs text-text-muted">
+                <span
+                  className={cn(
+                    "mr-1 font-semibold uppercase",
+                    v.severity === "block" ? "text-danger" : "text-warning",
+                  )}
+                >
+                  {v.severity}
+                </span>
+                {v.message}
+              </li>
+            ))}
+          </ul>
+        ) : rules ? (
+          <p className="mt-1 text-xs text-text-muted">Within all your risk rules.</p>
+        ) : (
+          <p className="mt-1 text-xs text-text-muted">Enter entry and stop to validate.</p>
+        )}
       </div>
 
       {error ? <p className="text-xs text-danger">{error}</p> : null}

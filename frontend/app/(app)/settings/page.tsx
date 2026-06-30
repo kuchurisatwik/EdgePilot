@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Field } from "@/components/ui/Field";
+import { RulesManager } from "@/features/rules/RulesManager";
 import { StrategyManager } from "@/features/strategies/StrategyManager";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useSettings, useUpdateSettings } from "@/hooks/useSettings";
@@ -124,7 +125,7 @@ export default function SettingsPage() {
 
       <StrategyManager />
 
-      <p className="text-xs text-text-muted">Risk Rules (M4) will appear here in a later phase.</p>
+      <RulesManager />
     </div>
   );
 }

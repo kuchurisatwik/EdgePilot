@@ -1,5 +1,5 @@
 import { api } from "@/services/apiClient";
-import type { OrderType, Trade, TradeDirection, TradeRiskBreakdown } from "@/types";
+import type { OrderType, RiskCalcResponse, Trade, TradeDirection } from "@/types";
 
 export type RiskCalcInput = {
   entry_price: number;
@@ -20,10 +20,11 @@ export type TradePlanInput = {
   risk_pct?: number | null;
   notes?: string | null;
   thesis?: string | null;
+  acknowledge_override?: boolean;
 };
 
 export const tradeApi = {
-  calculate: (body: RiskCalcInput) => api.post<TradeRiskBreakdown>("/api/risk/calculate", body),
+  calculate: (body: RiskCalcInput) => api.post<RiskCalcResponse>("/api/risk/calculate", body),
   plan: (body: TradePlanInput) => api.post<Trade>("/api/trades/plan", body),
   get: (id: string) => api.get<Trade>(`/api/trades/${id}`),
   list: () => api.get<Trade[]>("/api/trades"),

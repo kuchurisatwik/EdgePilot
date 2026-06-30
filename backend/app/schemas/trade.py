@@ -7,6 +7,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.trade import OrderType, Trade, TradeDirection, TradeStatus
+from app.schemas.rule import RuleEvaluationResult
 from app.services.risk_engine import RiskBreakdown
 
 
@@ -51,6 +52,15 @@ class TradePlanRequest(BaseModel):
     risk_pct: Decimal | None = Field(default=None, gt=0, le=100)
     notes: str | None = Field(default=None, max_length=4000)
     thesis: str | None = Field(default=None, max_length=4000)
+    # Set true to proceed past a BLOCK verdict (override-with-acknowledgment).
+    acknowledge_override: bool = False
+
+
+class RiskCalcResponse(BaseModel):
+    """Live preview: the Risk Engine breakdown + the Rule Engine verdict."""
+
+    risk: TradeRiskBreakdown
+    rules: RuleEvaluationResult
 
 
 class TradeResponse(BaseModel):

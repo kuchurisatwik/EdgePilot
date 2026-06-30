@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.models.user import User
+from app.schemas.rule import RuleEvaluationResult
 from app.schemas.trade import TradePlanRequest, TradeResponse
 from app.services import trade_service
 
@@ -49,3 +50,12 @@ def update_trade(
 ) -> TradeResponse:
     trade = trade_service.update_trade(db, current_user.id, trade_id, payload)
     return TradeResponse.from_trade(trade)
+
+
+@router.post("/{trade_id}/validate", response_model=RuleEvaluationResult)
+def validate_trade(
+    trade_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> RuleEvaluationResult:
+    return trade_service.validate_trade(db, current_user.id, trade_id)

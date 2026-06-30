@@ -9,11 +9,13 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.exceptions import NotFoundError, RuleBlockError, ValidationError
+from app.models.rule import RuleSeverity, RuleStatus
 from app.models.trade import Trade, TradeDirection, TradeStatus
 from app.repositories import trade_repo, user_repo
+from app.schemas.rule import RuleEvaluationResult
 from app.schemas.trade import RiskCalcRequest, TradePlanRequest
-from app.services import strategy_service
+from app.services import rule_engine, strategy_service
 from app.services.risk_engine import RiskBreakdown, ZeroRiskError, compute_breakdown
 
 
@@ -56,12 +58,14 @@ def _validate_sides(
             )
 
 
-def calculate_risk(db: Session, user_id: uuid.UUID, payload: RiskCalcRequest) -> RiskBreakdown:
-    """Stateless preview for the live Trade Planner panel."""
+def calculate_risk(
+    db: Session, user_id: uuid.UUID, payload: RiskCalcRequest
+) -> tuple[RiskBreakdown, RuleEvaluationResult]:
+    """Stateless preview for the live Trade Planner panel: risk + rule verdict."""
     risk_pct = _resolve_risk_pct(db, user_id, payload.risk_pct)
     account_size = _account_size(db, user_id)
     try:
-        return compute_breakdown(
+        breakdown = compute_breakdown(
             account_size=account_size,
             risk_pct=risk_pct,
             entry=payload.entry_price,
@@ -70,6 +74,15 @@ def calculate_risk(db: Session, user_id: uuid.UUID, payload: RiskCalcRequest) ->
         )
     except ZeroRiskError as exc:
         raise ValidationError("Entry and stop loss must differ.", code="zero_risk") from exc
+
+    rules = rule_engine.evaluate(
+        db,
+        user_id,
+        risk_pct=risk_pct,
+        max_loss=breakdown.max_loss,
+        account_size=account_size,
+    )
+    return breakdown, rules
 
 
 def plan_trade(db: Session, user_id: uuid.UUID, payload: TradePlanRequest) -> Trade:
@@ -94,6 +107,19 @@ def plan_trade(db: Session, user_id: uuid.UUID, payload: TradePlanRequest) -> Tr
         target=payload.take_profit,
     )
 
+    # Rule Engine: a BLOCK requires an explicit acknowledged override.
+    rules = rule_engine.evaluate(
+        db, user_id, risk_pct=risk_pct, max_loss=breakdown.max_loss, account_size=account_size
+    )
+    overridden = False
+    if rules.status == RuleStatus.BLOCK:
+        if not payload.acknowledge_override:
+            blocking = "; ".join(
+                v.message for v in rules.violations if v.severity == RuleSeverity.block
+            )
+            raise RuleBlockError(f"Trade blocked by your rules: {blocking}", code="rule_block")
+        overridden = True
+
     trade = Trade(
         user_id=user_id,
         strategy_id=strategy.id,
@@ -115,6 +141,7 @@ def plan_trade(db: Session, user_id: uuid.UUID, payload: TradePlanRequest) -> Tr
         rr_ratio=breakdown.rr_ratio,
         capital_exposure=breakdown.capital_exposure,
         status=TradeStatus.draft,
+        rule_overridden=overridden,
     )
     return trade_repo.add(db, trade)
 
@@ -175,3 +202,16 @@ def update_trade(
 
 def list_trades(db: Session, user_id: uuid.UUID) -> list[Trade]:
     return trade_repo.list_for_user(db, user_id)
+
+
+def validate_trade(
+    db: Session, user_id: uuid.UUID, trade_id: uuid.UUID
+) -> RuleEvaluationResult:
+    trade = get_trade(db, user_id, trade_id)
+    return rule_engine.evaluate(
+        db,
+        user_id,
+        risk_pct=trade.risk_pct,
+        max_loss=trade.max_loss,
+        account_size=trade.account_size_at_entry,
+    )

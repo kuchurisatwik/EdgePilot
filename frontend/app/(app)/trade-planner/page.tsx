@@ -73,33 +73,70 @@ export default function TradePlannerPage() {
     return { entry_price: entryN, stop_loss: stopN, take_profit: targetN };
   }, [entryN, stopN, targetN]);
 
-  const { data: breakdown, isFetching, error } = useRiskCalc(calcInput);
+  const { data, isFetching, error } = useRiskCalc(calcInput);
+  const breakdown = data?.risk;
+  const rules = data?.rules;
   const currency = settings?.quote_currency ?? "USDT";
 
   const canPlan =
     strategyId != null && symbol.trim().length > 0 && entryN != null && stopN != null;
 
+  async function submitPlan(acknowledgeOverride: boolean) {
+    if (strategyId == null || entryN == null || stopN == null) return;
+    const trade = await planTrade.mutateAsync({
+      strategy_id: strategyId,
+      symbol: symbol.trim(),
+      direction,
+      order_type: orderType,
+      entry_price: entryN,
+      stop_loss: stopN,
+      take_profit: targetN,
+      current_price: parseNum(currentPrice),
+      notes: notes.trim() || null,
+      acknowledge_override: acknowledgeOverride,
+    });
+    setSavedId(trade.id);
+  }
+
   async function onPlan() {
     setPlanError(null);
     setSavedId(null);
-    if (!canPlan || strategyId == null || entryN == null || stopN == null) {
+    if (!canPlan) {
       setPlanError("Select a strategy and enter a symbol, entry and stop.");
       return;
     }
+
+    // Override-with-acknowledgment: a BLOCK requires explicit confirmation.
+    if (rules?.status === "BLOCK") {
+      const reasons = rules.violations
+        .filter((v) => v.severity === "block")
+        .map((v) => `• ${v.message}`)
+        .join("\n");
+      if (!window.confirm(`This trade violates your rules:\n\n${reasons}\n\nOverride and save anyway?`)) {
+        return;
+      }
+      try {
+        await submitPlan(true);
+      } catch (err) {
+        setPlanError(err instanceof ApiError ? err.message : "Could not plan the trade.");
+      }
+      return;
+    }
+
     try {
-      const trade = await planTrade.mutateAsync({
-        strategy_id: strategyId,
-        symbol: symbol.trim(),
-        direction,
-        order_type: orderType,
-        entry_price: entryN,
-        stop_loss: stopN,
-        take_profit: targetN,
-        current_price: parseNum(currentPrice),
-        notes: notes.trim() || null,
-      });
-      setSavedId(trade.id);
+      await submitPlan(false);
     } catch (err) {
+      // Server-side BLOCK fallback (rules changed since the last preview).
+      if (err instanceof ApiError && err.code === "rule_block") {
+        if (window.confirm(`${err.message}\n\nOverride and save anyway?`)) {
+          try {
+            await submitPlan(true);
+          } catch (err2) {
+            setPlanError(err2 instanceof ApiError ? err2.message : "Could not plan the trade.");
+          }
+        }
+        return;
+      }
       setPlanError(err instanceof ApiError ? err.message : "Could not plan the trade.");
     }
   }
@@ -201,9 +238,18 @@ export default function TradePlannerPage() {
               type="button"
               onClick={onPlan}
               disabled={!canPlan || planTrade.isPending}
-              className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-60"
+              className={cn(
+                "rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-60",
+                rules?.status === "BLOCK"
+                  ? "bg-danger hover:bg-danger/90"
+                  : "bg-accent hover:bg-accent/90",
+              )}
             >
-              {planTrade.isPending ? "Saving…" : "Plan Trade (save draft)"}
+              {planTrade.isPending
+                ? "Saving…"
+                : rules?.status === "BLOCK"
+                  ? "Override & Save Draft"
+                  : "Plan Trade (save draft)"}
             </button>
             {savedId ? (
               <span className="text-sm text-success">
@@ -221,6 +267,7 @@ export default function TradePlannerPage() {
         <aside className="col-span-12 rounded-lg border border-border bg-panel-raised p-5 lg:col-span-4">
           <RiskPanel
             breakdown={breakdown}
+            rules={rules}
             currency={currency}
             loading={isFetching}
             error={error instanceof ApiError ? error.message : null}
