@@ -14,6 +14,7 @@ from app.models.market_context import (  # noqa: F401
     VolatilityRegime,
 )
 from app.models.rule import RiskRule, RuleSeverity, RuleStatus, RuleType  # noqa: F401
+from app.models.screenshot import Screenshot, ScreenshotSlot  # noqa: F401
 from app.models.strategy import RiskAppetite, Strategy  # noqa: F401
 from app.models.trade import (  # noqa: F401
     OrderType,
@@ -45,4 +46,6 @@ __all__ = [
     "MarketSession",
     "VolatilityRegime",
     "MarketDataSource",
+    "Screenshot",
+    "ScreenshotSlot",
 ]

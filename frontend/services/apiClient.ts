@@ -96,6 +96,33 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 }
 
+/** Lower-level authed fetch (no JSON parsing) for uploads + binary streams. */
+async function authedFetch(path: string, init: RequestInit): Promise<Response> {
+  const doFetch = (bearer: string | null) =>
+    fetch(`${BASE_URL}${path}`, {
+      ...init,
+      credentials: "include",
+      headers: {
+        ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
+        ...(init.headers ?? {}),
+      },
+    });
+
+  let response = await doFetch(tokenStorage.get());
+  if (response.status === 401 && tokenStorage.get()) {
+    refreshInFlight ??= refreshAccessToken().finally(() => {
+      refreshInFlight = null;
+    });
+    const refreshed = await refreshInFlight;
+    if (refreshed) {
+      response = await doFetch(tokenStorage.get());
+    } else {
+      tokenStorage.clear();
+    }
+  }
+  return response;
+}
+
 export const api = {
   get: <T>(path: string, options?: RequestOptions) =>
     request<T>(path, { ...options, method: "GET" }),
@@ -105,6 +132,26 @@ export const api = {
     request<T>(path, { ...options, method: "PUT", body }),
   del: <T>(path: string, options?: RequestOptions) =>
     request<T>(path, { ...options, method: "DELETE" }),
+
+  /** Multipart upload (browser sets the Content-Type boundary). */
+  upload: async <T>(path: string, form: FormData): Promise<T> => {
+    const response = await authedFetch(path, { method: "POST", body: form });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      const err = (payload as { error?: { code?: string; message?: string } } | null)?.error;
+      throw new ApiError(response.status, err?.code ?? "error", err?.message ?? response.statusText);
+    }
+    return payload as T;
+  },
+
+  /** Fetch a binary resource (e.g. a screenshot) as a Blob with auth. */
+  blob: async (path: string): Promise<Blob> => {
+    const response = await authedFetch(path, { method: "GET" });
+    if (!response.ok) {
+      throw new ApiError(response.status, "error", response.statusText);
+    }
+    return response.blob();
+  },
 };
 
 export type HealthResponse = { status: string; db: string };

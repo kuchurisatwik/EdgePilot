@@ -6,6 +6,7 @@ import { useState } from "react";
 import { MetricTile } from "@/components/data/MetricTile";
 import { CloseTradeDialog } from "@/components/trades/CloseTradeDialog";
 import { MarketContextPanel } from "@/components/trades/MarketContextPanel";
+import { ScreenshotGallery } from "@/components/trades/ScreenshotGallery";
 import { useSettings } from "@/hooks/useSettings";
 import { useDeleteTrade, useOpenTrade, useTrade } from "@/hooks/useTrades";
 import { cn } from "@/lib/utils";
@@ -204,10 +205,7 @@ export default function TradeReviewPage() {
           <MarketContextPanel tradeId={trade.id} status={trade.status} />
         </div>
         <div className="col-span-12 lg:col-span-4">
-          <LockedCard
-            title="Screenshots"
-            note="Entry and exit chart screenshots (trade + higher timeframe) — arrives in M8."
-          />
+          <ScreenshotGallery tradeId={trade.id} />
         </div>
         <div className="col-span-12 lg:col-span-4">
           <LockedCard

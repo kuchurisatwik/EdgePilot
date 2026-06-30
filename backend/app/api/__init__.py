@@ -9,6 +9,7 @@ from app.api.journal.routes import router as journal_router
 from app.api.market_context.routes import router as market_context_router
 from app.api.risk.routes import router as risk_router
 from app.api.rules.routes import router as rules_router
+from app.api.screenshots.routes import router as screenshots_router
 from app.api.settings.routes import router as settings_router
 from app.api.strategies.routes import router as strategy_router
 from app.api.trades.routes import router as trade_router
@@ -26,3 +27,4 @@ api_router.include_router(analytics_router, prefix="/analytics", tags=["analytic
 api_router.include_router(
     market_context_router, prefix="/market-context", tags=["market-context"]
 )  # M7
+api_router.include_router(screenshots_router, tags=["screenshots"])  # M8

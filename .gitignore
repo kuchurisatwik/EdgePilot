@@ -28,7 +28,7 @@ yarn-error.log*
 # ---- Local data / storage ----
 /data/
 /storage/
-screenshots/
+/backend/storage/
 pgdata/
 *.db
 *.sqlite

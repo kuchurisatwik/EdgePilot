@@ -168,6 +168,22 @@ export type MarketSession = "asia" | "london" | "newyork" | "unknown";
 export type VolatilityRegime = "low" | "normal" | "high" | "unknown";
 export type MarketDataSource = "stub" | "provider" | "manual";
 
+export type ScreenshotSlot =
+  | "entry_trade_tf"
+  | "entry_higher_tf"
+  | "exit_trade_tf"
+  | "exit_higher_tf";
+
+export type Screenshot = {
+  id: string;
+  trade_id: string;
+  slot: ScreenshotSlot;
+  content_type: string;
+  size_bytes: number;
+  captured_at: string;
+  url: string;
+};
+
 export type MarketContext = {
   trade_id: string;
   atr: string | null;
