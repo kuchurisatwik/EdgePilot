@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { MetricTile } from "@/components/data/MetricTile";
 import { CloseTradeDialog } from "@/components/trades/CloseTradeDialog";
+import { MarketContextPanel } from "@/components/trades/MarketContextPanel";
 import { useSettings } from "@/hooks/useSettings";
 import { useDeleteTrade, useOpenTrade, useTrade } from "@/hooks/useTrades";
 import { cn } from "@/lib/utils";
@@ -200,10 +201,7 @@ export default function TradeReviewPage() {
 
       <div className="grid grid-cols-12 gap-4">
         <div className="col-span-12 lg:col-span-4">
-          <LockedCard
-            title="Market Context"
-            note="ATR, RSI, VWAP, volume, trend and session captured per trade — arrives in M7."
-          />
+          <MarketContextPanel tradeId={trade.id} status={trade.status} />
         </div>
         <div className="col-span-12 lg:col-span-4">
           <LockedCard

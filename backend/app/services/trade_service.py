@@ -16,7 +16,12 @@ from app.models.trade import Trade, TradeDirection, TradeResult, TradeStatus
 from app.repositories import trade_repo, user_repo
 from app.schemas.rule import RuleEvaluationResult
 from app.schemas.trade import RiskCalcRequest, TradeCloseRequest, TradePlanRequest
-from app.services import outcome_service, rule_engine, strategy_service
+from app.services import (
+    market_context_service,
+    outcome_service,
+    rule_engine,
+    strategy_service,
+)
 from app.services.risk_engine import RiskBreakdown, ZeroRiskError, compute_breakdown
 
 
@@ -247,6 +252,8 @@ def open_trade(
     trade.status = TradeStatus.open
     trade.opened_at = datetime.now(UTC)
     db.flush()
+    # Auto-capture the market fingerprint at open time (session always known).
+    market_context_service.capture_for_trade(db, trade)
     return trade
 
 

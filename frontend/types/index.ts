@@ -162,3 +162,23 @@ export type DashboardSummary = {
   open_trades: number;
   closed_trades: number;
 };
+
+export type MarketTrend = "uptrend" | "downtrend" | "sideways" | "unknown";
+export type MarketSession = "asia" | "london" | "newyork" | "unknown";
+export type VolatilityRegime = "low" | "normal" | "high" | "unknown";
+export type MarketDataSource = "stub" | "provider" | "manual";
+
+export type MarketContext = {
+  trade_id: string;
+  atr: string | null;
+  rsi: string | null;
+  vwap: string | null;
+  volume: string | null;
+  trend: MarketTrend;
+  session: MarketSession;
+  volatility_regime: VolatilityRegime;
+  timeframe: string;
+  higher_timeframe: string;
+  captured_at: string;
+  data_source: MarketDataSource;
+};
