@@ -1,5 +1,12 @@
 import { api } from "@/services/apiClient";
-import type { OrderType, RiskCalcResponse, Trade, TradeDirection } from "@/types";
+import type {
+  JournalFilters,
+  OrderType,
+  RiskCalcResponse,
+  Trade,
+  TradeDirection,
+  TradeListResponse,
+} from "@/types";
 
 export type RiskCalcInput = {
   entry_price: number;
@@ -23,9 +30,26 @@ export type TradePlanInput = {
   acknowledge_override?: boolean;
 };
 
+function journalQuery(filters: JournalFilters): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== undefined && value !== null && value !== "") {
+      params.set(key, String(value));
+    }
+  }
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
 export const tradeApi = {
   calculate: (body: RiskCalcInput) => api.post<RiskCalcResponse>("/api/risk/calculate", body),
   plan: (body: TradePlanInput) => api.post<Trade>("/api/trades/plan", body),
-  get: (id: string) => api.get<Trade>(`/api/trades/${id}`),
-  list: () => api.get<Trade[]>("/api/trades"),
+  get: (id: string) => api.get<Trade>(`/api/journal/${id}`),
+  journal: (filters: JournalFilters) =>
+    api.get<TradeListResponse>(`/api/journal${journalQuery(filters)}`),
+  open: (id: string, acknowledgeOverride = false) =>
+    api.post<Trade>(`/api/trades/${id}/open`, { acknowledge_override: acknowledgeOverride }),
+  close: (id: string, body: { exit_price: number; exit_notes?: string | null }) =>
+    api.post<Trade>(`/api/trades/${id}/close`, body),
+  remove: (id: string) => api.del<void>(`/api/trades/${id}`),
 };

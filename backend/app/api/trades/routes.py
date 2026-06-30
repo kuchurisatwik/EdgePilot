@@ -8,7 +8,12 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.models.user import User
 from app.schemas.rule import RuleEvaluationResult
-from app.schemas.trade import TradePlanRequest, TradeResponse
+from app.schemas.trade import (
+    TradeCloseRequest,
+    TradeOpenRequest,
+    TradePlanRequest,
+    TradeResponse,
+)
 from app.services import trade_service
 
 router = APIRouter()
@@ -59,3 +64,36 @@ def validate_trade(
     db: Session = Depends(get_db),
 ) -> RuleEvaluationResult:
     return trade_service.validate_trade(db, current_user.id, trade_id)
+
+
+@router.post("/{trade_id}/open", response_model=TradeResponse)
+def open_trade(
+    trade_id: uuid.UUID,
+    payload: TradeOpenRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TradeResponse:
+    trade = trade_service.open_trade(
+        db, current_user.id, trade_id, acknowledge_override=payload.acknowledge_override
+    )
+    return TradeResponse.from_trade(trade)
+
+
+@router.post("/{trade_id}/close", response_model=TradeResponse)
+def close_trade(
+    trade_id: uuid.UUID,
+    payload: TradeCloseRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TradeResponse:
+    trade = trade_service.close_trade(db, current_user.id, trade_id, payload)
+    return TradeResponse.from_trade(trade)
+
+
+@router.delete("/{trade_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_trade(
+    trade_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    trade_service.delete_trade(db, current_user.id, trade_id)

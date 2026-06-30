@@ -6,7 +6,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.trade import OrderType, Trade, TradeDirection, TradeStatus
+from app.models.trade import OrderType, Trade, TradeDirection, TradeResult, TradeStatus
 from app.schemas.rule import RuleEvaluationResult
 from app.services.risk_engine import RiskBreakdown
 
@@ -68,6 +68,7 @@ class TradeResponse(BaseModel):
 
     id: uuid.UUID
     strategy_id: uuid.UUID
+    strategy_name: str
     symbol: str
     direction: TradeDirection
     order_type: OrderType
@@ -78,9 +79,16 @@ class TradeResponse(BaseModel):
     account_size_at_entry: Decimal
     risk_pct: Decimal
     status: TradeStatus
+    rule_overridden: bool
     notes: str | None
     thesis: str | None
     created_at: datetime
+    opened_at: datetime | None
+    closed_at: datetime | None
+    exit_price: Decimal | None
+    pnl: Decimal | None
+    r_multiple: Decimal | None
+    result: TradeResult | None
     risk: TradeRiskBreakdown
 
     @classmethod
@@ -93,6 +101,7 @@ class TradeResponse(BaseModel):
         return cls(
             id=t.id,
             strategy_id=t.strategy_id,
+            strategy_name=t.strategy.name,
             symbol=t.symbol,
             direction=t.direction,
             order_type=t.order_type,
@@ -103,9 +112,16 @@ class TradeResponse(BaseModel):
             account_size_at_entry=t.account_size_at_entry,
             risk_pct=t.risk_pct,
             status=t.status,
+            rule_overridden=t.rule_overridden,
             notes=t.notes,
             thesis=t.thesis,
             created_at=t.created_at,
+            opened_at=t.opened_at,
+            closed_at=t.closed_at,
+            exit_price=t.exit_price,
+            pnl=t.pnl,
+            r_multiple=t.r_multiple,
+            result=t.result,
             risk=TradeRiskBreakdown(
                 per_unit_risk=t.per_unit_risk,
                 risk_amount=t.risk_amount,
@@ -116,3 +132,19 @@ class TradeResponse(BaseModel):
                 exposure_pct=exposure_pct,
             ),
         )
+
+
+class TradeOpenRequest(BaseModel):
+    acknowledge_override: bool = False
+
+
+class TradeCloseRequest(BaseModel):
+    exit_price: Decimal = Field(gt=0)
+    exit_notes: str | None = Field(default=None, max_length=4000)
+
+
+class TradeListResponse(BaseModel):
+    items: list[TradeResponse]
+    total: int
+    page: int
+    page_size: int

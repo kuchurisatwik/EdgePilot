@@ -78,9 +78,12 @@ export type RiskCalcResponse = {
   rules: RuleEvaluationResult;
 };
 
+export type TradeResult = "win" | "loss" | "breakeven";
+
 export type Trade = {
   id: string;
   strategy_id: string;
+  strategy_name: string;
   symbol: string;
   direction: TradeDirection;
   order_type: OrderType;
@@ -91,8 +94,31 @@ export type Trade = {
   account_size_at_entry: string;
   risk_pct: string;
   status: TradeStatus;
+  rule_overridden: boolean;
   notes: string | null;
   thesis: string | null;
   created_at: string;
+  opened_at: string | null;
+  closed_at: string | null;
+  exit_price: string | null;
+  pnl: string | null;
+  r_multiple: string | null;
+  result: TradeResult | null;
   risk: TradeRiskBreakdown;
+};
+
+export type TradeListResponse = {
+  items: Trade[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type JournalFilters = {
+  strategy_id?: string;
+  symbol?: string;
+  result?: TradeResult;
+  status?: TradeStatus;
+  page?: number;
+  page_size?: number;
 };

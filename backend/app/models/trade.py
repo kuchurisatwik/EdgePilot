@@ -9,6 +9,7 @@ import enum
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -20,9 +21,12 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
+
+if TYPE_CHECKING:
+    from app.models.strategy import Strategy
 
 _PRICE = Numeric(28, 8)
 _SIZE = Numeric(28, 8)
@@ -115,3 +119,5 @@ class Trade(UUIDMixin, TimestampMixin, Base):
     result: Mapped[TradeResult | None] = mapped_column(
         Enum(TradeResult, native_enum=False, length=10), nullable=True
     )
+
+    strategy: Mapped["Strategy"] = relationship(lazy="selectin")

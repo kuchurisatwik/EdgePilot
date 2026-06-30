@@ -5,17 +5,18 @@ per-user settings/strategy, persists the draft, and never recomputes risk itself
 """
 
 import uuid
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundError, RuleBlockError, ValidationError
 from app.models.rule import RuleSeverity, RuleStatus
-from app.models.trade import Trade, TradeDirection, TradeStatus
+from app.models.trade import Trade, TradeDirection, TradeResult, TradeStatus
 from app.repositories import trade_repo, user_repo
 from app.schemas.rule import RuleEvaluationResult
-from app.schemas.trade import RiskCalcRequest, TradePlanRequest
-from app.services import rule_engine, strategy_service
+from app.schemas.trade import RiskCalcRequest, TradeCloseRequest, TradePlanRequest
+from app.services import outcome_service, rule_engine, strategy_service
 from app.services.risk_engine import RiskBreakdown, ZeroRiskError, compute_breakdown
 
 
@@ -214,4 +215,99 @@ def validate_trade(
         risk_pct=trade.risk_pct,
         max_loss=trade.max_loss,
         account_size=trade.account_size_at_entry,
+    )
+
+
+def open_trade(
+    db: Session,
+    user_id: uuid.UUID,
+    trade_id: uuid.UUID,
+    *,
+    acknowledge_override: bool = False,
+) -> Trade:
+    trade = get_trade(db, user_id, trade_id)
+    if trade.status != TradeStatus.draft:
+        raise ValidationError("Only draft trades can be opened.", code="not_draft")
+
+    rules = rule_engine.evaluate(
+        db,
+        user_id,
+        risk_pct=trade.risk_pct,
+        max_loss=trade.max_loss,
+        account_size=trade.account_size_at_entry,
+    )
+    if rules.status == RuleStatus.BLOCK:
+        if not acknowledge_override:
+            blocking = "; ".join(
+                v.message for v in rules.violations if v.severity == RuleSeverity.block
+            )
+            raise RuleBlockError(f"Trade blocked by your rules: {blocking}", code="rule_block")
+        trade.rule_overridden = True
+
+    trade.status = TradeStatus.open
+    trade.opened_at = datetime.now(UTC)
+    db.flush()
+    return trade
+
+
+def close_trade(
+    db: Session, user_id: uuid.UUID, trade_id: uuid.UUID, payload: TradeCloseRequest
+) -> Trade:
+    trade = get_trade(db, user_id, trade_id)
+    if trade.status != TradeStatus.open:
+        raise ValidationError("Only open trades can be closed.", code="not_open")
+
+    outcome = outcome_service.compute_outcome(
+        direction=trade.direction,
+        entry_price=trade.entry_price,
+        exit_price=payload.exit_price,
+        position_size=trade.position_size,
+        risk_amount=trade.risk_amount,
+    )
+    trade.exit_price = payload.exit_price
+    trade.pnl = outcome.pnl
+    trade.r_multiple = outcome.r_multiple
+    trade.result = outcome.result
+    trade.status = TradeStatus.closed
+    trade.closed_at = datetime.now(UTC)
+    if payload.exit_notes:
+        trade.notes = f"{trade.notes}\n{payload.exit_notes}" if trade.notes else payload.exit_notes
+    db.flush()
+    return trade
+
+
+def delete_trade(db: Session, user_id: uuid.UUID, trade_id: uuid.UUID) -> None:
+    trade = get_trade(db, user_id, trade_id)
+    if trade.status != TradeStatus.draft:
+        raise ValidationError("Only draft trades can be deleted.", code="not_draft")
+    db.delete(trade)
+    db.flush()
+
+
+def list_journal(
+    db: Session,
+    user_id: uuid.UUID,
+    *,
+    strategy_id: uuid.UUID | None = None,
+    symbol: str | None = None,
+    result: TradeResult | None = None,
+    status: TradeStatus | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> tuple[list[Trade], int]:
+    page = max(1, page)
+    page_size = min(max(1, page_size), 100)
+    return trade_repo.list_with_filters(
+        db,
+        user_id,
+        strategy_id=strategy_id,
+        symbol=symbol,
+        result=result,
+        status=status,
+        date_from=date_from,
+        date_to=date_to,
+        limit=page_size,
+        offset=(page - 1) * page_size,
     )

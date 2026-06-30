@@ -54,3 +54,43 @@ def consecutive_loss_count(db: Session, user_id: uuid.UUID) -> int:
         else:
             break
     return count
+
+
+def list_with_filters(
+    db: Session,
+    user_id: uuid.UUID,
+    *,
+    strategy_id: uuid.UUID | None = None,
+    symbol: str | None = None,
+    result: TradeResult | None = None,
+    status: TradeStatus | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+    limit: int = 20,
+    offset: int = 0,
+) -> tuple[list[Trade], int]:
+    conditions = [Trade.user_id == user_id]
+    if strategy_id is not None:
+        conditions.append(Trade.strategy_id == strategy_id)
+    if symbol:
+        conditions.append(Trade.symbol == symbol.strip().upper())
+    if result is not None:
+        conditions.append(Trade.result == result)
+    if status is not None:
+        conditions.append(Trade.status == status)
+    if date_from is not None:
+        conditions.append(Trade.created_at >= date_from)
+    if date_to is not None:
+        conditions.append(Trade.created_at <= date_to)
+
+    total = db.scalar(select(func.count()).select_from(Trade).where(*conditions)) or 0
+    items = list(
+        db.scalars(
+            select(Trade)
+            .where(*conditions)
+            .order_by(Trade.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+    )
+    return items, total
