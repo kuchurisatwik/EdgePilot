@@ -94,3 +94,35 @@ def list_with_filters(
         )
     )
     return items, total
+
+
+def list_closed(
+    db: Session,
+    user_id: uuid.UUID,
+    *,
+    strategy_id: uuid.UUID | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+) -> list[Trade]:
+    conditions = [Trade.user_id == user_id, Trade.status == TradeStatus.closed]
+    if strategy_id is not None:
+        conditions.append(Trade.strategy_id == strategy_id)
+    if date_from is not None:
+        conditions.append(Trade.closed_at >= date_from)
+    if date_to is not None:
+        conditions.append(Trade.closed_at <= date_to)
+    return list(db.scalars(select(Trade).where(*conditions).order_by(Trade.closed_at.asc())))
+
+
+def list_open(db: Session, user_id: uuid.UUID) -> list[Trade]:
+    return list(
+        db.scalars(
+            select(Trade).where(Trade.user_id == user_id, Trade.status == TradeStatus.open)
+        )
+    )
+
+
+def latest(db: Session, user_id: uuid.UUID) -> Trade | None:
+    return db.scalar(
+        select(Trade).where(Trade.user_id == user_id).order_by(Trade.created_at.desc()).limit(1)
+    )

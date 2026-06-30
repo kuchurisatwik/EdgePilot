@@ -122,3 +122,43 @@ export type JournalFilters = {
   page?: number;
   page_size?: number;
 };
+
+export type AnalyticsSummary = {
+  trade_count: number;
+  win_rate: string | null;
+  profit_factor: string | null;
+  expectancy: string | null;
+  average_r: string | null;
+  net_pnl: string;
+  gross_profit: string;
+  gross_loss: string;
+  max_drawdown: string;
+  max_drawdown_pct: string | null;
+};
+
+export type EquityPoint = { date: string; equity: string; drawdown: string };
+export type EquityCurveResponse = { starting_balance: string; points: EquityPoint[] };
+
+export type GroupPerformance = {
+  key: string;
+  label: string;
+  trade_count: number;
+  win_rate: string | null;
+  profit_factor: string | null;
+  expectancy: string | null;
+  average_r: string | null;
+  net_pnl: string;
+};
+
+export type DashboardSummary = {
+  quote_currency: string;
+  account_size: string;
+  account_balance: string;
+  realized_pnl: string;
+  today_pnl: string;
+  risk_exposure: string;
+  current_drawdown: string;
+  trade_score: number | null;
+  open_trades: number;
+  closed_trades: number;
+};

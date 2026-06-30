@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from app.api.analytics.routes import router as analytics_router
 from app.api.auth.routes import router as auth_router
 from app.api.health.routes import router as health_router
 from app.api.journal.routes import router as journal_router
@@ -20,3 +21,4 @@ api_router.include_router(risk_router, prefix="/risk", tags=["risk"])  # M3
 api_router.include_router(trade_router, prefix="/trades", tags=["trades"])  # M3
 api_router.include_router(rules_router, prefix="/rules", tags=["rules"])  # M4
 api_router.include_router(journal_router, prefix="/journal", tags=["journal"])  # M5
+api_router.include_router(analytics_router, prefix="/analytics", tags=["analytics"])  # M6
